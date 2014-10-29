@@ -8,10 +8,10 @@ VERSION=$(git describe --tags 2> /dev/null)
 
 FILES=$(git ls-files|grep -v .gitignore)
 [ -z "${FILES}" ] && { echo "ERROR: No files to put in ZIP."; exit 1; }
-if [ -x ./make-release.sh ]
+if [ -x ./make-version.sh ]
 then
-    ./make-release.sh
-    [ ! -f version.h ] && { echo "ERROR: Missing version.h after running make-release.sh"; exit 1; }
+    ./make-version.sh
+    [ ! -f version.h ] && { echo "ERROR: Missing version.h after running make-version.sh"; exit 1; }
     FILES="$FILES version.h"
 fi
 
