@@ -1,0 +1,23 @@
+##############################################################
+
+sodaq_mbili.name=SODAQ Mbili 1284p 8MHz using Optiboot at 57600 baud
+
+sodaq_mbili.upload.tool=arduino:avrdude
+sodaq_mbili.upload.protocol=arduino
+sodaq_mbili.upload.maximum_size=130048
+sodaq_mbili.upload.speed=57600
+
+sodaq_mbili.bootloader.tool=arduino:avrdude
+sodaq_mbili.bootloader.low_fuses=0xFF
+sodaq_mbili.bootloader.high_fuses=0xD6
+sodaq_mbili.bootloader.extended_fuses=0xFD
+#sodaq_mbili.bootloader.path=optiboot
+sodaq_mbili.bootloader.file=optiboot/optiboot_atmega1284p.hex
+sodaq_mbili.bootloader.unlock_bits=0x3F
+sodaq_mbili.bootloader.lock_bits=0x0F
+
+sodaq_mbili.build.mcu=atmega1284p
+sodaq_mbili.build.f_cpu=8000000L
+sodaq_mbili.build.core=arduino:arduino
+sodaq_mbili.build.variant=mbili
+sodaq_mbili.build.board=AVR_SODAQ_MBILI

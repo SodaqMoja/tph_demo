@@ -1,0 +1,7 @@
+*~
+version.h
+.*.swp
+*.zip
+.DS_Store
+/Release
+/tmp
