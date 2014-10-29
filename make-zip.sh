@@ -8,12 +8,14 @@ VERSION=$(git describe --tags 2> /dev/null)
 
 FILES=$(git ls-files|grep -v .gitignore)
 [ -z "${FILES}" ] && { echo "ERROR: No files to put in ZIP."; exit 1; }
-if [ -x ./make-version.sh ]
-then
-    ./make-version.sh
-    [ ! -f version.h ] && { echo "ERROR: Missing version.h after running make-version.sh"; exit 1; }
-    FILES="$FILES version.h"
-fi
+for i in */*.ino
+do
+    D=$(dirname $i)
+    [ ! -x "$D/make-version.sh" ] && continue
+    (cd "$D" && ./make-version.sh)
+    [ ! -f $D/version.h ] && { echo "ERROR: Missing $D/version.h after running make-version.sh"; exit 1; }
+    FILES="$FILES $D/version.h"
+done
 
 DIRNAME="$(basename $(pwd))"
 ZIPNAME="${DIRNAME}-${VERSION}"
