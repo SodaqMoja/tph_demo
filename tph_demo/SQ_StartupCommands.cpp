@@ -90,7 +90,8 @@ static int readLine(Stream & stream, char line[], size_t size, uint32_t & ts_max
     }
 
     c = stream.read();
-    if (c < 0) {
+    // Ignore NUL bytes too
+    if (c <= 0) {
       continue;
     }
     ts_max = millis() + TIME_FOR_STARTUP_COMMANDS;
