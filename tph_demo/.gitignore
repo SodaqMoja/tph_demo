@@ -1,3 +1,8 @@
 version.h
 /Release
 /tmp
+
+# Eclipse project files. We don't want them in the GIT repo
+.cproject
+.project
+/.settings

@@ -2,3 +2,7 @@
 .*.swp
 *.zip
 .DS_Store
+
+# Eclipse files
+/.metadata
+/RemoteSystemsTempFiles
