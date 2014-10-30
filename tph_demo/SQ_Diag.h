@@ -14,7 +14,7 @@
  *
  * Comment or make it a #undef to send diag messages to a Software Serial
  */
-//#define USE_DIAG_SERIAL 1
+#define USE_DIAG_SERIAL 1
 
 #if ENABLE_DIAG
 #if USE_DIAG_SERIAL
