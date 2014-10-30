@@ -21,6 +21,7 @@
 //################ defines ################
 
 #define ADC_AREF        3.3     // DEFAULT see wiring_analog.c
+#define ADC_AREF_MV     3300    // In milliVolt
 #define MIN_BATTERY_LEVEL1_GPRSBEE      3.5    // Below this level do not use GPRSbee
 #define MIN_BATTERY_LEVEL2_GPRSBEE      3.9    // Below this level try GPRSbee on and check
 
@@ -83,6 +84,7 @@ uint32_t getNow();
 void syncRTCwithServer(uint32_t now);
 
 float getRealBatteryVoltage();
+uint16_t getBatteryMilliVolt();
 bool checkBatteryOnGPRSbee();
 
 void addDeviceId(String & str);
@@ -279,7 +281,7 @@ void createRecord(uint32_t now)
   rec.hum_sht21 = SHT2x.GetHumidity() * 10;
   rec.temp_bmp85 = bmp.readTemperature() * 10;
   rec.pres_bmp85 = bmp.readPressure() / 10;         // divide by 100 and multiply by 10
-  rec.batteryVoltage = analogRead(BATVOLTPIN);
+  rec.batteryVoltage = getBatteryMilliVolt();
 
   {
     static int counter;
@@ -363,7 +365,7 @@ void doSystemCheck(uint32_t now)
 {
   showDateTime(now);
 
-  showBattVolt(getRealBatteryVoltage());
+  showBattVolt(getBatteryMilliVolt());
   parms.dump();
   //showFreeRAM();
   //memoryDump();
@@ -463,13 +465,24 @@ void syncRTCwithServer(uint32_t now)
 float getRealBatteryVoltage()
 {
   /*
-   * This pin is connected to the middle of a 10M and 2M resistor
+   * This pin is connected to the middle of a 4M7 and 10M resistor
    * that are between Vcc (battery) and GND.
    * So actual battery voltage is:
-   *    <adc value> * 1023. / AREF * (10+2) / 2
+   *    <adc value> * 1023. / AREF * (47+100) / 100
    */
   uint16_t batteryVoltage = analogRead(BATVOLTPIN);
   return (ADC_AREF / 1023.) * (BATVOLT_R1 + BATVOLT_R2) / BATVOLT_R2 * batteryVoltage;
+}
+
+/*
+ * \brief Read the battery voltage and compute actual voltage in milliVolt
+ *
+ * See getRealBatteryVoltage for more details
+ */
+uint16_t getBatteryMilliVolt()
+{
+  uint32_t batteryVoltage = analogRead(BATVOLTPIN);
+  return batteryVoltage * (BATVOLT_R1 + BATVOLT_R2) * ADC_AREF_MV / 1023 / BATVOLT_R2;
 }
 
 /*

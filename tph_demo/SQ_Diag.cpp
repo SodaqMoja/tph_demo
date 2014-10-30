@@ -56,9 +56,9 @@ void dumpBuffer(const uint8_t * buf, size_t size)
   }
 }
 
-void showBattVolt(float value)
+void showBattVolt(uint16_t value)
 {
-  DIAGPRINT(F("Battery: ")); DIAGPRINT((int)(value * 1000)); DIAGPRINTLN(F("mV"));
+  DIAGPRINT(F("Battery: ")); DIAGPRINT(value); DIAGPRINTLN(F("mV"));
 }
 
 void memoryDump()

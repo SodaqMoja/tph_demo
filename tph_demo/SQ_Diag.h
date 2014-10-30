@@ -31,7 +31,7 @@ void dumpBuffer(const uint8_t * buf, size_t size);
 void memoryDump();
 void showAddress(const char *txt, void * addr);
 void showFreeRAM();
-void showBattVolt(float value);
+void showBattVolt(uint16_t value);
 
 #else
 #define DIAGPRINT(...)
