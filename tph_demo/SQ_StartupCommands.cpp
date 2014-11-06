@@ -95,16 +95,26 @@ static int readLine(Stream & stream, char line[], size_t size, uint32_t & ts_max
       continue;
     }
     ts_max = millis() + TIME_FOR_STARTUP_COMMANDS;
-    stream.write((char)c);
     seenCR = c == '\r';
     if (c == '\r') {
+      stream.write((char)c);
       ts_waitLF = millis() + 50;        // Wait another .05 sec for an optional LF
     } else if (c == '\n') {
+      stream.write((char)c);
       goto end;
+    } else if (c == 0x08 || c == 0x7f) {
+      // Erase the last character
+      if (len > 0) {
+        stream.write("\b \b");
+        --len;
+      }
     } else {
-      // Any other character is stored in the line buffer
+      // Any "normal" character is stored in the line buffer
       if (len < size - 1) {
-        line[len++] = c;
+        if (c >= ' ' && c < 0x7f) {
+          stream.write((char)c);
+          line[len++] = c;
+        }
       }
     }
   }
