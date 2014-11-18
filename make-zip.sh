@@ -33,7 +33,7 @@ cpio -pLmud ${TDIR}/
 [ -d Release ] && { cp -f Release/*.hex ${TDIR}/ 2> /dev/null; }
 echo "This ZIP file was created from this git commit: $VERSION" > ${TDIR}/README-ZIP
 
-(cd /tmp && zip -r $ZIPNAME.zip $DIRNAME)
-mv /tmp/$ZIPNAME.zip .
+(cd /tmp/$DIRNAME && zip -r $ZIPNAME.zip .)
+mv /tmp/$DIRNAME/$ZIPNAME.zip .
 ln -sf -T $ZIPNAME.zip ${DIRNAME}.zip
 rm -fr ${TDIR}
