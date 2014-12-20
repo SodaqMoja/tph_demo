@@ -1,0 +1,24 @@
+##############################################################
+
+SodaqMoja.name=SODAQ Moja ATmega328P 8MHz at 57600 baud
+
+SodaqMoja.upload.tool=arduino:avrdude
+SodaqMoja.upload.protocol=arduino
+SodaqMoja.upload.maximum_size=32256
+SodaqMoja.upload.speed=57600
+#SodaqMoja.upload.disable_flushing=true
+
+SodaqMoja.bootloader.tool=arduino:avrdude
+SodaqMoja.bootloader.low_fuses=0xFF
+SodaqMoja.bootloader.high_fuses=0xDE
+SodaqMoja.bootloader.extended_fuses=0x05
+#SodaqMoja.bootloader.path=optiboot
+SodaqMoja.bootloader.file=optiboot/optiboot_atmega328_pro_8MHz_baud57600.hex
+SodaqMoja.bootloader.unlock_bits=0x3F
+SodaqMoja.bootloader.lock_bits=0x3B
+
+SodaqMoja.build.mcu=atmega328p
+SodaqMoja.build.f_cpu=8000000L
+SodaqMoja.build.core=arduino:arduino
+SodaqMoja.build.variant=moja
+SodaqMoja.build.board=AVR_SODAQ_MOJA

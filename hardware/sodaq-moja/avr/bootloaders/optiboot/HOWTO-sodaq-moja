@@ -1,0 +1,19 @@
+Was:
+avrdude: safemode: lfuse reads as FF
+avrdude: safemode: hfuse reads as DC
+avrdude: safemode: efuse reads as 5
+
+http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega328p
+http://eleccelerator.com/fusecalc/fusecalc.php?chip=atmega328p&LOW=FF&HIGH=DE&EXTENDED=05&LOCKBIT=0F
+
+make BAUD_RATE=38400 atmega328_pro8
+
+My new avrdude commands:
+avrdude -v -patmega328p -cavrispmkII -P usb -e -Ulock:w:0x3F:m -Uefuse:w:0x05:m -Uhfuse:w:0xde:m -Ulfuse:w:0xff:m
+avrdude -v -patmega328p -cavrispmkII -P usb -e -Uflash:w:optiboot_atmega328_pro_8MHz_baud38400.hex:i -Ulock:w:0x0F:m
+
+make BAUD_RATE=57600 atmega328_pro8
+
+My new avrdude commands:
+avrdude -v -patmega328p -cavrispmkII -P usb -e -Ulock:w:0x3F:m -Uefuse:w:0x05:m -Uhfuse:w:0xde:m -Ulfuse:w:0xff:m
+avrdude -v -patmega328p -cavrispmkII -P usb -e -Uflash:w:optiboot_atmega328_pro_8MHz_baud57600.hex:i -Ulock:w:0x0F:m
