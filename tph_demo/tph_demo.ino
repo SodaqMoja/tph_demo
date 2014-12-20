@@ -34,7 +34,7 @@
 
 // Sketchbook libraries
 #include <Arduino.h>
-#include <Sodaq_Mbili.h>
+#include <Sodaq.h>
 #include <Sodaq_BMP085.h>
 #include <Sodaq_SHT2x.h>
 #include <Sodaq_DS3231.h>
