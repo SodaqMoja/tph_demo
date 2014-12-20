@@ -411,43 +411,60 @@ bool GPRSbeeClass::waitForPrompt(const char *prompt, uint32_t ts_max)
   return true;
 }
 
-void GPRSbeeClass::sendCommandPrepare()
+/*
+ * \brief Prepare for a new command
+ */
+void GPRSbeeClass::sendCommandProlog()
 {
   flushInput();
   mydelay(50);
   diagPrint(F(">> "));
 }
-void GPRSbeeClass::sendCommandPartial(const char *cmd)
+
+/*
+ * \brief Add a part of the command (don't yet send the final CR)
+ */
+void GPRSbeeClass::sendCommandAdd(char c)
+{
+  diagPrint(c);
+  _myStream->print(c);
+}
+void GPRSbeeClass::sendCommandAdd(int i)
+{
+  diagPrint(i);
+  _myStream->print(i);
+}
+void GPRSbeeClass::sendCommandAdd(const char *cmd)
 {
   diagPrint(cmd);
   _myStream->print(cmd);
 }
-void GPRSbeeClass::sendCommandPartial_P(const char *cmd)
+void GPRSbeeClass::sendCommandAdd_P(const char *cmd)
 {
   diagPrint(reinterpret_cast<const __FlashStringHelper *>(cmd));
   _myStream->print(reinterpret_cast<const __FlashStringHelper *>(cmd));
 }
-void GPRSbeeClass::sendCommandNoPrepare(const char *cmd)
+
+/*
+ * \brief Send the final CR of the command
+ */
+void GPRSbeeClass::sendCommandEpilog()
 {
-  sendCommandPartial(cmd);
   diagPrintLn();
   _myStream->print('\r');
 }
-void GPRSbeeClass::sendCommandNoPrepare_P(const char *cmd)
-{
-  sendCommandPartial_P(cmd);
-  diagPrintLn();
-  _myStream->print('\r');
-}
+
 void GPRSbeeClass::sendCommand(const char *cmd)
 {
-  sendCommandPrepare();
-  sendCommandNoPrepare(cmd);
+  sendCommandProlog();
+  sendCommandAdd(cmd);
+  sendCommandEpilog();
 }
 void GPRSbeeClass::sendCommand_P(const char *cmd)
 {
-  sendCommandPrepare();
-  sendCommandNoPrepare_P(cmd);
+  sendCommandProlog();
+  sendCommandAdd_P(cmd);
+  sendCommandEpilog();
 }
 
 /*
@@ -1231,22 +1248,131 @@ ending:
   return retval;
 }
 
-bool GPRSbeeClass::doHTTPGET(const char *apn, const char *url, char *buffer, size_t len)
+/*
+ * The middle part of the whole HTTP POST
+ *
+ * HTTPPARA with the URL
+ * HTTPDATA
+ * HTTPACTION
+ */
+bool GPRSbeeClass::doHTTPPOSTmiddle(const char *url, const char *buffer, size_t len)
 {
-  return doHTTPGET(apn, 0, 0, url, buffer, len);
+  uint32_t ts_max;
+  bool retval = false;
+  char num_bytes[16];
+
+  // set http param URL value
+  sendCommandProlog();
+  sendCommandAdd_P(PSTR("AT+HTTPPARA=\"URL\",\""));
+  sendCommandAdd(url);
+  sendCommandAdd('"');
+  sendCommandEpilog();
+  if (!waitForOK()) {
+    goto ending;
+  }
+
+  sendCommandProlog();
+  sendCommandAdd_P(PSTR("AT+HTTPDATA="));
+  itoa(len, num_bytes, 10);
+  sendCommandAdd(num_bytes);
+  sendCommandAdd_P(PSTR(",10000"));
+  sendCommandEpilog();
+  ts_max = millis() + 4000;
+  if (!waitForMessage_P(PSTR("DOWNLOAD"), ts_max)) {
+    goto ending;
+  }
+
+  // Send data ...
+  for (size_t i = 0; i < len; ++i) {
+    _myStream->print(*buffer++);
+  }
+
+  if (!waitForOK()) {
+    goto ending;
+  }
+
+  if (!doHTTPACTION(1)) {
+    goto ending;
+  }
+
+  // All is well if we get here.
+  retval = true;
+
+ending:
+  return retval;
 }
 
-bool GPRSbeeClass::doHTTPGET(const char *apn, const String & url, char *buffer, size_t len)
+/*
+ * The middle part of the whole HTTP POST, with a READ
+ *
+ * HTTPPARA with the URL
+ * HTTPDATA
+ * HTTPACTION
+ * HTTPREAD
+ */
+bool GPRSbeeClass::doHTTPPOSTmiddleWithReply(const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len)
 {
-  return doHTTPGET(apn, 0, 0, url.c_str(), buffer, len);
+  bool retval = false;;
+
+  if (!doHTTPPOSTmiddle(url, postdata, pdlen)) {
+    goto ending;
+  }
+
+  // Read all data
+  if (!doHTTPREAD(buffer, len)) {
+    goto ending;
+  }
+
+  // All is well if we get here.
+  retval = true;
+
+ending:
+    return retval;
 }
 
-bool GPRSbeeClass::doHTTPGET1(const char *apn)
+/*
+ * The middle part of the whole HTTP GET
+ *
+ * HTTPPARA with the URL
+ * HTTPACTION
+ * HTTPREAD
+ */
+bool GPRSbeeClass::doHTTPGETmiddle(const char *url, char *buffer, size_t len)
 {
-  return doHTTPGET1(apn, 0, 0);
+  bool retval = false;
+
+  // set http param URL value
+  sendCommandProlog();
+  sendCommandAdd_P(PSTR("AT+HTTPPARA=\"URL\",\""));
+  sendCommandAdd(url);
+  sendCommandAdd('"');
+  sendCommandEpilog();
+  if (!waitForOK()) {
+    goto ending;
+  }
+
+  if (!doHTTPACTION(0)) {
+    goto ending;
+  }
+
+  // Read all data
+  if (!doHTTPREAD(buffer, len)) {
+    goto ending;
+  }
+
+  // All is well if we get here.
+  retval = true;
+
+ending:
+  return retval;
 }
 
-bool GPRSbeeClass::doHTTPGET1(const char *apn, const char *apnuser, const char *apnpwd)
+bool GPRSbeeClass::doHTTPprolog(const char *apn)
+{
+  return doHTTPprolog(apn, 0, 0);
+}
+
+bool GPRSbeeClass::doHTTPprolog(const char *apn, const char *apnuser, const char *apnpwd)
 {
   bool retval = false;
 
@@ -1279,7 +1405,10 @@ bool GPRSbeeClass::doHTTPGET1(const char *apn, const char *apnuser, const char *
   }
 
   // set http param CID value
-  // FIXME Do we need this?
+  // FIXME Do we really need this?
+  if (!sendCommandWaitForOK_P(PSTR("AT+HTTPPARA=\"CID\",1"))) {
+    goto ending;
+  }
 
   retval = true;
 
@@ -1287,44 +1416,23 @@ ending:
   return retval;
 }
 
+void GPRSbeeClass::doHTTPepilog()
+{
+  if (!sendCommandWaitForOK_P(PSTR("AT+HTTPTERM"))) {
+    // This is an error, but we can still return success.
+  }
+}
+
 /*
- * The middle part of the whole HTTP GET
- *
- * HTTPPARA with the URL
- * HTTPACTION
- * HTTPREAD
+ * \brief Read the data from a GET or POST
  */
-bool GPRSbeeClass::doHTTPGET2(const char *url, char *buffer, size_t len)
+bool GPRSbeeClass::doHTTPREAD(char *buffer, size_t len)
 {
   uint32_t ts_max;
   size_t getLength = 0;
   int i;
   bool retval = false;
 
-  // set http param URL value
-  sendCommandPrepare();
-  sendCommandPartial_P(PSTR("AT+HTTPPARA=\"URL\",\""));
-  sendCommandPartial(url);
-  sendCommandNoPrepare_P(PSTR("\""));
-  if (!waitForOK()) {
-    goto ending;
-  }
-
-  // set http action type 0 = GET, 1 = POST, 2 = HEAD
-  if (!sendCommandWaitForOK_P(PSTR("AT+HTTPACTION=0"))) {
-    goto ending;
-  }
-  // Now we're expecting something like this: +HTTPACTION: <Method>,<StatusCode>,<DataLen>
-  // <Method> 0
-  // <StatusCode> 200
-  // <DataLen> ??
-  ts_max = millis() + 8000;
-  if (waitForMessage_P(PSTR("+HTTPACTION:"), ts_max)) {
-    // TODO Check for StatusCode 200
-    // TODO Check for DataLen
-  }
-
-  // Read all data
   // Expect
   //   +HTTPREAD:<date_len>
   //   <data>
@@ -1364,11 +1472,124 @@ ending:
   return retval;
 }
 
-void GPRSbeeClass::doHTTPGET3()
+bool GPRSbeeClass::doHTTPACTION(char num)
 {
-  if (!sendCommandWaitForOK_P(PSTR("AT+HTTPTERM"))) {
-    // This is an error, but we can still return success.
+  uint32_t ts_max;
+  bool retval = false;
+
+  // set http action type 0 = GET, 1 = POST, 2 = HEAD
+  sendCommandProlog();
+  sendCommandAdd_P(PSTR("AT+HTTPACTION="));
+  sendCommandAdd((int)num);
+  sendCommandEpilog();
+  if (!waitForOK()) {
+    goto ending;
   }
+  // Now we're expecting something like this: +HTTPACTION: <Method>,<StatusCode>,<DataLen>
+  // <Method> 0
+  // <StatusCode> 200
+  // <DataLen> ??
+  ts_max = millis() + 20000;
+  if (waitForMessage_P(PSTR("+HTTPACTION:"), ts_max)) {
+    // The 14 is the length of "+HTTPACTION:1,", i.e. WITH the digit and the comma
+    const char *ptr = _SIM900_buffer + 14;
+    char *bufend;
+    uint8_t replycode = strtoul(ptr, &bufend, 0);
+    if (bufend == ptr) {
+      // Invalid number
+      goto ending;
+    }
+    if (replycode == 200) {
+      retval = true;
+    } else {
+      // Everything else is considered an error
+    }
+  }
+
+  // All is well if we get here.
+
+ending:
+  return retval;
+}
+
+bool GPRSbeeClass::doHTTPPOST(const char *apn, const char *url, const char *postdata, size_t pdlen)
+{
+  return doHTTPPOST(apn, 0, 0, url, postdata, pdlen);
+}
+
+bool GPRSbeeClass::doHTTPPOST(const char *apn, const char *apnuser, const char *apnpwd,
+    const char *url, const char *postdata, size_t pdlen)
+{
+  bool retval = false;
+
+  if (!on()) {
+    goto ending;
+  }
+
+  if (!doHTTPprolog(apn, apnuser, apnpwd)) {
+    goto cmd_error;
+  }
+
+  if (!doHTTPPOSTmiddle(url, postdata, pdlen)) {
+    goto cmd_error;
+  }
+
+  retval = true;
+  doHTTPepilog();
+  goto ending;
+
+cmd_error:
+  diagPrintLn(F("doHTTPGET failed!"));
+
+ending:
+  off();
+  return retval;
+}
+
+
+bool GPRSbeeClass::doHTTPPOSTWithReply(const char *apn,
+    const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len)
+{
+  return doHTTPPOSTWithReply(apn, 0, 0, url, postdata, pdlen, buffer, len);
+}
+
+bool GPRSbeeClass::doHTTPPOSTWithReply(const char *apn, const char *apnuser, const char *apnpwd,
+    const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len)
+{
+  bool retval = false;
+
+  if (!on()) {
+    goto ending;
+  }
+
+  if (!doHTTPprolog(apn, apnuser, apnpwd)) {
+    goto cmd_error;
+  }
+
+  if (!doHTTPPOSTmiddleWithReply(url, postdata, pdlen, buffer, len)) {
+    goto cmd_error;
+  }
+
+  retval = true;
+  doHTTPepilog();
+  goto ending;
+
+cmd_error:
+  diagPrintLn(F("doHTTPGET failed!"));
+
+ending:
+  off();
+  return retval;
+}
+
+bool GPRSbeeClass::doHTTPGET(const char *apn, const char *url, char *buffer, size_t len)
+{
+  return doHTTPGET(apn, 0, 0, url, buffer, len);
+}
+
+bool GPRSbeeClass::doHTTPGET(const char *apn, const String & url, char *buffer, size_t len)
+{
+  return doHTTPGET(apn, 0, 0, url.c_str(), buffer, len);
 }
 
 bool GPRSbeeClass::doHTTPGET(const char *apn, const char *apnuser, const char *apnpwd,
@@ -1380,16 +1601,16 @@ bool GPRSbeeClass::doHTTPGET(const char *apn, const char *apnuser, const char *a
     goto ending;
   }
 
-  if (!doHTTPGET1(apn, apnuser, apnpwd)) {
+  if (!doHTTPprolog(apn, apnuser, apnpwd)) {
     goto cmd_error;
   }
 
-  if (!doHTTPGET2(url, buffer, len)) {
+  if (!doHTTPGETmiddle(url, buffer, len)) {
     goto cmd_error;
   }
 
   retval = true;
-  doHTTPGET3();
+  doHTTPepilog();
   goto ending;
 
 cmd_error:

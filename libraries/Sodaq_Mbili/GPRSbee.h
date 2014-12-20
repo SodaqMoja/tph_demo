@@ -1,7 +1,7 @@
 #ifndef GPRSBEE_H_
 #define GPRSBEE_H_
 /*
- * Copyright (c) 2013 Kees Bakker.  All rights reserved.
+ * Copyright (c) 2013-2014 Kees Bakker.  All rights reserved.
  *
  * This file is part of GPRSbee.
  *
@@ -34,20 +34,38 @@ public:
   void init(Stream &stream, int ctsPin, int powerPin);
   bool on();
   bool off();
+#if defined(__AVR_ATmega1284P__)
   void setPowerSwitchedOnOff(bool x) { _onoffMethod = x; }
+#endif
   void setDiag(Stream &stream) { _diagStream = &stream; }
   void setDiag(Stream *stream) { _diagStream = stream; }
 
   void setMinSignalQuality(int q) { _minSignalQuality = q; }
 
+  bool doHTTPPOST(const char *apn, const char *url, const char *postdata, size_t pdlen);
+  bool doHTTPPOST(const char *apn, const String & url, const char *postdata, size_t pdlen);
+  bool doHTTPPOST(const char *apn, const char *apnuser, const char *apnpwd,
+      const char *url, const char *postdata, size_t pdlen);
+  bool doHTTPPOSTmiddle(const char *url, const char *postdata, size_t pdlen);
+  bool doHTTPPOSTmiddleWithReply(const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len);
+
+  bool doHTTPPOSTWithReply(const char *apn, const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len);
+  bool doHTTPPOSTWithReply(const char *apn, const String & url, const char *postdata, size_t pdlen, char *buffer, size_t len);
+  bool doHTTPPOSTWithReply(const char *apn, const char *apnuser, const char *apnpwd,
+      const char *url, const char *postdata, size_t pdlen, char *buffer, size_t len);
+
   bool doHTTPGET(const char *apn, const char *url, char *buffer, size_t len);
   bool doHTTPGET(const char *apn, const String & url, char *buffer, size_t len);
   bool doHTTPGET(const char *apn, const char *apnuser, const char *apnpwd,
       const char *url, char *buffer, size_t len);
-  bool doHTTPGET1(const char *apn);
-  bool doHTTPGET1(const char *apn, const char *apnuser, const char *apnpwd);
-  bool doHTTPGET2(const char *url, char *buffer, size_t len);
-  void doHTTPGET3();
+  bool doHTTPGETmiddle(const char *url, char *buffer, size_t len);
+
+  bool doHTTPREAD(char *buffer, size_t len);
+  bool doHTTPACTION(char num);
+
+  bool doHTTPprolog(const char *apn);
+  bool doHTTPprolog(const char *apn, const char *apnuser, const char *apnpwd);
+  void doHTTPepilog();
 
   bool openTCP(const char *apn, const char *server, int port, bool transMode=false);
   bool openTCP(const char *apn, const char *apnuser, const char *apnpwd,
@@ -100,15 +118,20 @@ private:
   bool waitForMessage_P(const char *msg, uint32_t ts_max);
   int waitForMessages(const char *msgs[], size_t nrMsgs, uint32_t ts_max);
   bool waitForPrompt(const char *prompt, uint32_t ts_max);
-  void sendCommandPrepare();
-  void sendCommandPartial(const char *cmd);
-  void sendCommandPartial_P(const char *cmd);
-  void sendCommandNoPrepare(const char *cmd);
-  void sendCommandNoPrepare_P(const char *cmd);
+
+  void sendCommandProlog();
+  void sendCommandAdd(char c);
+  void sendCommandAdd(int i);
+  void sendCommandAdd(const char *cmd);
+  void sendCommandAdd_P(const char *cmd);
+  void sendCommandEpilog();
+
   void sendCommand(const char *cmd);
   void sendCommand_P(const char *cmd);
+
   bool sendCommandWaitForOK(const char *cmd, uint16_t timeout=4000);
   bool sendCommandWaitForOK_P(const char *cmd, uint16_t timeout=4000);
+
   bool getIntValue(const char *cmd, const char *reply, int * value, uint32_t ts_max);
   bool getStrValue(const char *cmd, const char *reply, char * str, size_t size, uint32_t ts_max);
   bool getStrValue(const char *cmd, char * str, size_t size, uint32_t ts_max);
